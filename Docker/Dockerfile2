@@ -1,0 +1,68 @@
+# 1. ベースになるコンテナのイメージを取得.
+#       何も入っていない特定のOSのコンテナイメージにすることが多い.
+#       - docker pull ubuntu:resolute-20260106.1.
+FROM ubuntu:resolute-20260106.1
+# 安定版 Ubuntu LTSFROM ubuntu:24.04
+
+# コンテナ側のユーザーを変更.
+USER root
+
+# 2. RUN : コンテナイメージ作成時に実行するシェルコマンドを設定.
+#       最初は空のOSだが apt install したい.
+#       RUNの後にシェルコマンドを書く.
+#       本来、&&を使いシェルコマンドをワンライナーで書き、最後にキャッシュを削除するコマンドを書いた方が
+#       イメージサイズが小さくなって好ましい.
+# aptのupdate.
+RUN apt update
+# python 3.9.
+RUN apt install -y python3
+RUN apt install -y python3-pip
+RUN apt install -y python3-venv
+
+# pythonのライブラリを一括インストール. docker_requirements.txt.
+#       ローカル側にrequirements.txtがあっても.
+#       このファイルを実際に使うコンテナ側にこのファイルがないとインストールできない.
+# コンテナ側にdocker_requirements.txtをコピーする.
+# COPY　ローカルファイルのパス コンテナ側のパス.
+#COPY docker_requirements.txt docker_requirements.txt
+#COPY docker_requirements.txt .
+# pipアップグレード.RUN python3 -m pip install --upgrade pip
+#RUN python3 -m pip install --break-system-packages -r docker_requirements.txt
+#RUN python3 -m pip install -r docker_requirements.txt
+#RUN python3 -m pip install -r /docker_requirements.txt
+
+# requirements ファイルをコピー
+COPY docker_requirements.txt .
+
+# ライブラリインストール
+RUN python3 -m pip install --break-system-packages -r docker_requirements.txt
+
+
+# コンテナ側の環境変数を設定.
+# ENV 環境変数＝設定する値.
+ENV SITE_DOMAIN=reii.ichi.com
+
+# コンテナ側の作業ディレクトリを変更 相対パスでも絶対パスでもいい.
+#WORKDIR /var
+
+# コンテナ側にファイルを追加.
+# ADD 追加元のファイルパス 追加先のファイルパス.
+#       COPY : リモート上のファイルを扱えない.
+#        ADD : リモート上のファイルを扱える コンテナ側の追加できるurlでも.
+#       COPY : 圧縮ファイルがそのままコピー / ADDだと自動で解凍される.
+# ADD https://archive.ics.uci.edu/ml/machine-learning-databases/iris/iris.date .
+
+# コンテナ実行(docker run)の時に動かしたいシェルコマンドを指定.
+# ENTRYPOINT ['実行ファイル', 'パラメータ1', 'パラメータ2'].
+#              RUN : コンテナイメージ作成時に実行.
+#       ENTRYPOINT : コンテナ実行時(docker run)に実行.
+#       ENTRYPOINTを使い、docker fileを実行可能ファイルのように扱える.
+#       docker run である処理を実行させるためのコンテナとして作成する時などに使う.
+
+# docker-script.py を実行するためだけのコンテナを作成する場合.
+
+COPY docker_script.py .
+ENTRYPOINT ["python3", "docker_script.py"]
+
+# こうして作成したイメージでコンテナをdocker runするとそのタイミングで docker_script.py が実行される.
+# そして、この docker_script.py が終了したらコンテナも停止される.

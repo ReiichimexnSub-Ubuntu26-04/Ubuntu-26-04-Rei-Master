@@ -1,0 +1,10 @@
+pip
+setuptools
+wheel
+cryptography
+pytest
+google
+gspread
+google-auth
+openpyxl
+mysql-connector-python
